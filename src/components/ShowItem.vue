@@ -35,7 +35,8 @@ export default {
         alert("Item is incomplete. Please fill out every field.");
         return;
       }
-      this.$emit("updated-name", this.name);
+      this.item.name = this.name;
+      this.$emit("updatedItem", this.item);
       this.closeModal();
     },
     closeModal() {

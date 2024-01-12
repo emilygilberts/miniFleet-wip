@@ -13,7 +13,7 @@
       <div class="modal-content">
         <ShowItem
           :item="editItem"
-          @updated-name="updateName"
+          @updatedItem="updateItem"
           @close-modal="closeShowItemModal"
         ></ShowItem>
       </div>
@@ -102,27 +102,19 @@ export default {
     toggleCreatePositionModal() {
       this.showCreatePositionModal = !this.showCreatePositionModal;
     },
-    // openCreatePositionModal() {
-    //   this.showCreatePositionModal = true;
-    // },
-    // closeCreatePositionModal() {
-    //   this.showCreatePositionModal = false;
-    // },
-    closeShowPositionModal() {
-      this.showEditPosition = false;
-    },
-    updateName(updatedName) {
-      const index = this.items.indexOf(this.editItem);
-      this.$emit("updatedName", updatedName, index);
-      this.editItem = null;
-      this.showEdit = false;
-    },
     closeShowItemModal() {
       this.showEdit = false;
     },
-    updatePosition(updatedLat, updatedLong) {
-      const index = this.positions.indexOf(this.editingPosition);
-      this.$emit("updatedPosition", updatedLat, updatedLong, index);
+    closeShowPositionModal() {
+      this.showEditPosition = false;
+    },
+    updateItem(updatedItem) {
+      this.$emit("updatedItem", updatedItem);
+      this.editItem = null;
+      this.showEdit = false;
+    },
+    updatePosition(updatedPosition) {
+      this.$emit("updatedPosition", updatedPosition);
       this.showEditPosition = false;
       this.editingPosition = null;
     },

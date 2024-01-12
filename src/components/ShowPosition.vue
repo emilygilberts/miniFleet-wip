@@ -39,9 +39,10 @@ export default {
   },
   methods: {
     updatePosition() {
-      this.lat = getRandomLatInRange();
-      this.long = getRandomLongInRange();
-      this.$emit("updated-position", this.lat, this.long);
+      this.position.lat = getRandomLatInRange();
+      this.position.long = getRandomLongInRange();
+      this.position.timestamp = new Date();
+      this.$emit("updated-position", this.position);
       // Clear the form fields
       this.lat = "";
       this.long = "";

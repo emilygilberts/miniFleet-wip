@@ -8,7 +8,7 @@
         @removeItem="removeItem"
         @addPosition="addPosition"
         @removePosition="removePosition"
-        @updatedName="editItemName"
+        @updatedItem="editItem"
         @updatedPosition="editPosition"
       ></LeftNav>
     </div>
@@ -34,15 +34,12 @@ export default {
     };
   },
   methods: {
-    editItemName(name, index) {
-      this.items[index].name = name;
-    },
-    editPosition(lat, long, index) {
-      this.positions[index].lat = lat;
-      this.positions[index].long = long;
-    },
     addNewItem(newItem) {
       this.items.push(newItem);
+    },
+    editItem(updatedItem) {
+      const index = this.items.indexOf(updatedItem);
+      this.items[index] = updatedItem;
     },
     removeItem(item) {
       const index = this.items.indexOf(item);
@@ -53,8 +50,11 @@ export default {
       }
     },
     addPosition(newPosition) {
-      ////make sure item exists
       this.positions.push(newPosition);
+    },
+    editPosition(updatedPosition) {
+      const index = this.positions.indexOf(updatedPosition);
+      this.positions[index] = updatedPosition;
     },
     removePosition(position) {
       const index = this.positions.indexOf(position);
@@ -73,7 +73,6 @@ export default {
   padding: 0;
   margin: 0;
   display: flex;
-  background-color: brown;
 }
 #list {
   flex: 3;

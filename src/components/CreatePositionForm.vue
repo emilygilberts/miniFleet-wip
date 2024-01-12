@@ -48,12 +48,14 @@ export default {
       const findItem = this.items.find((item) => {
         return item.name === this.itemName;
       });
+      const time = new Date();
       if (findItem) {
         const newPosition = {
           id: generateRandomId(),
           lat: getRandomLatInRange(),
           long: getRandomLongInRange(),
-          timestamp: new Date(),
+          timestamp: time,
+          created: time,
           itemId: findItem.id,
         };
         // Emit the created position to the parent component
