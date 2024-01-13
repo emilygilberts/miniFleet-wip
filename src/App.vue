@@ -21,7 +21,7 @@
 <script>
 import MapView from "@/components/MapView.vue";
 import LeftNav from "@/components/LeftNav.vue";
-
+import PouchDB from "pouchdb-browser";
 export default {
   components: {
     MapView,
@@ -29,68 +29,93 @@ export default {
   },
   data() {
     return {
-      initialLoadItems: [],
-      initialLoadPositions: [],
+      itemsDb: null,
+      positionsDb: null,
       items: [],
       positions: [],
     };
   },
-  beforeMount() {
-    //get stored items from local storage
-    const storedItems = localStorage.getItem("minifleet_items")
-      ? JSON.parse(localStorage.getItem("minifleet_items"))
-      : this.initialLoadItems;
-    this.items = storedItems;
-    //get stored positions from local storage
-    const storedPositions = localStorage.getItem("minifleet_positions")
-      ? JSON.parse(localStorage.getItem("minifleet_positions"))
-      : this.initialLoadPositions;
-    this.positions = storedPositions;
+  async mounted() {
+    //on mounted get stored items and positions from local pouchdb
+    const itemsdb = new PouchDB("minifleet_items");
+    this.itemsDb = itemsdb;
+    await this.getItems();
+
+    const positionsdb = new PouchDB("minifleet_positions");
+    this.positionsDb = positionsdb;
+    await this.getPositions();
   },
   methods: {
-    updateItemStorage() {
-      localStorage.setItem("minifleet_items", JSON.stringify(this.items));
+    async getItems() {
+      //retrieve all documents from local items database
+      const allDocs = await this.itemsDb.allDocs({
+        include_docs: true,
+      });
+      //map document contents to items
+      this.items = allDocs.rows.map((row) => row.doc);
     },
-    updatePositionStorage() {
-      localStorage.setItem(
-        "minifleet_positions",
-        JSON.stringify(this.positions)
+    async addNewItem(newItem) {
+      //post new item to local items db
+      const addition = await this.itemsDb.post(newItem);
+      if (addition.ok) {
+        await this.getItems();
+      }
+    },
+    async editItem(updatedItem) {
+      //put updated item to local items db
+      const update = await this.itemsDb.put(updatedItem);
+      if (update.ok) {
+        await this.getItems();
+      }
+    },
+    async removeItem(itemToRemove) {
+      //remove item - mark as deleted in local db
+      const removal = await this.itemsDb.remove(itemToRemove);
+      if (removal.ok) {
+        this.items = this.items.filter((item) => {
+          return item.id !== itemToRemove.id;
+        });
+      }
+      // Remove positions associated with the removed item
+      const positionsToRemove = this.positions.filter(
+        (pos) => pos.itemId === itemToRemove.id
+      );
+      await Promise.all(
+        positionsToRemove.map(async (position) => {
+          const removedPosition = await this.positionsDb.remove(position);
+        })
+      );
+      // Update the positions array after removing positions
+      this.positions = this.positions.filter(
+        (position) => position.itemId !== itemToRemove.id
       );
     },
-    addNewItem(newItem) {
-      this.items.push(newItem);
-      this.updateItemStorage();
+    async getPositions() {
+      const allDocs = await this.positionsDb.allDocs({
+        include_docs: true,
+      });
+      this.positions = allDocs.rows.map((row) => row.doc);
     },
-    editItem(updatedItem) {
-      const index = this.items.indexOf(updatedItem);
-      this.items[index] = updatedItem;
-      this.updateItemStorage();
-    },
-    removeItem(item) {
-      const index = this.items.indexOf(item);
-      if (index > -1) {
-        this.items.splice(index, 1);
-        ////remove positions with itemid
-        this.positions = this.positions.filter((pos) => pos.itemId !== item.id);
+    async addPosition(newPosition) {
+      const addition = await this.positionsDb.post(newPosition);
+      if (addition.ok) {
+        await this.getPositions();
       }
-      this.updateItemStorage();
-      this.updatePositionStorage();
     },
-    addPosition(newPosition) {
-      this.positions.push(newPosition);
-      this.updatePositionStorage();
-    },
-    editPosition(updatedPosition) {
-      const index = this.positions.indexOf(updatedPosition);
-      this.positions[index] = updatedPosition;
-      this.updatePositionStorage();
-    },
-    removePosition(position) {
-      const index = this.positions.indexOf(position);
-      if (index > -1) {
-        this.positions.splice(index, 1);
+    async editPosition(updatedPosition) {
+      const update = await this.positionsDb.put(updatedPosition);
+      if (update.ok) {
+        await this.getPositions();
       }
-      this.updatePositionStorage();
+    },
+    async removePosition(positionToRemove) {
+      //remove position - mark as deleted in local db
+      const removal = await this.positionsDb.remove(positionToRemove);
+      if (removal.ok) {
+        this.positions = this.positions.filter((position) => {
+          return position.id !== positionToRemove.id;
+        });
+      }
     },
   },
 };
