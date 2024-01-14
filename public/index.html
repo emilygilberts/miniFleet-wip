@@ -12,6 +12,21 @@
     <title><%= htmlWebpackPlugin.options.title %></title>
   </head>
   <body>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('sw.js').then(
+            registration => {
+              console.log(`Service Worker registered! Scope: ${registration.scope}`);
+              console.log(registration);
+            },
+            error => {
+              console.error(`Service Worker registration failed: ${error}`);
+            },
+          );
+        });
+      }
+    </script>
     <noscript>
       <strong>We're sorry but <%= htmlWebpackPlugin.options.title %> doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
     </noscript>
