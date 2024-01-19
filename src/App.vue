@@ -101,10 +101,12 @@ export default {
       });
       replication
         .on("change", async (info) => {
-          if (db === this.itemsDb) {
-            await this.getItems();
-          } else if (db === this.positionsDb) {
-            await this.getPositions();
+          if (info.direction === "pull") {
+            if (db === this.itemsDb) {
+              await this.getItems();
+            } else if (db === this.positionsDb) {
+              await this.getPositions();
+            }
           }
         })
         .on("error", (err) => {
@@ -125,14 +127,21 @@ export default {
     async addNewItem(newItem) {
       //post new item to local items db
       const addition = await postDoc(this.itemsDb, newItem);
+      this.getItems();
     },
     async editItem(updatedItem) {
       //put updated item to local items db
       const update = await putDoc(this.itemsDb, updatedItem);
+      this.getItems();
     },
     async removeItem(itemToRemove) {
       //remove item - mark as deleted in local db
       const removal = await removeDoc(this.itemsDb, itemToRemove);
+      if (removal.ok) {
+        this.items = this.items.filter((item) => {
+          return item.id !== itemToRemove.id;
+        });
+      }
       // Remove positions associated with the removed item
       const positionsToRemove = this.positions.filter(
         (pos) => pos.itemId === itemToRemove.id
@@ -142,15 +151,26 @@ export default {
           await this.removePosition(position);
         })
       );
+      // Update the positions array after removing positions
+      this.positions = this.positions.filter(
+        (position) => position.itemId !== itemToRemove.id
+      );
     },
     async addPosition(newPosition) {
       const addition = await postDoc(this.positionsDb, newPosition);
+      this.getPositions();
     },
     async editPosition(updatedPosition) {
       const update = await putDoc(this.positionsDb, updatedPosition);
+      this.getPositions();
     },
     async removePosition(positionToRemove) {
       const removal = await removeDoc(this.positionsDb, positionToRemove);
+      if (removal.ok) {
+        this.positions = this.positions.filter((position) => {
+          return position.id !== positionToRemove.id;
+        });
+      }
     },
   },
 };
