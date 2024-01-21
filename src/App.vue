@@ -7,6 +7,27 @@
         <button @click="remindUpdate">Remind me later</button>
       </div>
     </div>
+    <div class="conflict-dialog" v-if="conflictExists">
+      <p>Conflict detected!</p>
+      <div class="conflict-details">
+        <div class="conflict-doc">
+          <h3>Original Document</h3>
+          <!-- Display properties of the original document -->
+          <pre>{{ conflictDoc }}</pre>
+        </div>
+        <div class="conflicting-versions">
+          <h3>Conflicting Versions</h3>
+          <!-- Display properties of conflicting versions -->
+          <div v-for="(version, index) in conflictingVersions" :key="index">
+            <pre>{{ version }}</pre>
+          </div>
+        </div>
+      </div>
+      <div class="conflict-dialog-buttons">
+        <button @click="chooseMine">Choose Mine</button>
+        <button @click="chooseIncoming">Choose Incoming</button>
+      </div>
+    </div>
     <div id="list">
       <LeftNav
         :items="items"
@@ -53,13 +74,18 @@ export default {
       positions: [],
       registration: null,
       updateExists: false,
+      conflictExists: false,
+      conflictDoc: null,
+      conflictingVersions: null,
     };
   },
   async mounted() {
     //get stored items and positions from local and setup replication
     this.setupPouchDBs();
     await this.getInitialData();
-
+  },
+  created() {
+    document.addEventListener("conflict-detected", this.handleConflict);
     //listen for available updates from the service worker
     document.addEventListener("swUpdateAvailable", this.updateAvailable);
     //event listener to reload page when service worker has changes
@@ -70,6 +96,31 @@ export default {
     }
   },
   methods: {
+    handleConflict(event) {
+      const { originalDoc, conflictingVersions } = event.detail;
+      console.log(
+        "Conflict detected for:",
+        originalDoc,
+        "conflicting version: ",
+        conflictingVersions
+      );
+      this.conflictDoc = originalDoc;
+      this.conflictingVersions = conflictingVersions;
+      this.conflictExists = true;
+    },
+    chooseMine() {
+      // Handle conflict resolution: Choose local version
+      console.log("Choosing local version");
+      // Implement your logic to resolve the conflict using the local version
+      this.conflictExists = false; // Close the conflict dialog
+    },
+
+    chooseIncoming() {
+      // Handle conflict resolution: Choose incoming version
+      console.log("Choosing incoming version");
+      // Implement your logic to resolve the conflict using the incoming version
+      this.conflictExists = false; // Close the conflict dialog
+    },
     updateAvailable(event) {
       this.registration = event.detail;
       this.updateExists = true;
@@ -101,7 +152,12 @@ export default {
       });
       replication
         .on("change", async (info) => {
+          console.log(db, " db changed");
+          if (info.direction === "push") {
+            console.log("pushing local updates");
+          }
           if (info.direction === "pull") {
+            console.log("pulling remote updates");
             if (db === this.itemsDb) {
               await this.getItems();
             } else if (db === this.positionsDb) {
@@ -185,16 +241,16 @@ export default {
   display: flex;
 }
 #list {
-  flex: 3;
-  width: 30%;
+  flex: 7;
+  width: 70%;
   height: 100%;
   background-color: #f0f0f0;
   overflow: auto;
   padding: 10px;
 }
 #map {
-  flex: 7;
-  width: 70%;
+  flex: 3;
+  width: 30%;
   height: 100%;
   overflow: hidden;
 }
@@ -227,5 +283,46 @@ body {
 .update-dialog button {
   margin: 5px;
   margin-left: 0px;
+}
+.conflict-dialog {
+  position: fixed;
+  z-index: 1000;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  max-width: 80%; /* Adjusted to limit the width */
+  border-radius: 15px;
+  border: 2px solid rgb(24, 24, 157);
+  box-shadow: 0 0 5px rgba(90, 87, 87, 0.5);
+  padding: 12px;
+  color: black;
+  background-color: #ffffff;
+  text-align: left;
+  overflow: hidden; /* Ensures that content does not overflow */
+}
+
+.conflict-details {
+  display: flex;
+  flex-wrap: wrap; /* Allows content to wrap to the next line if needed */
+}
+
+.conflict-doc,
+.conflicting-versions {
+  flex: 1;
+  min-width: 0; /* Allows content to shrink if needed */
+  padding: 10px;
+  border: 1px solid #ddd;
+  margin: 5px;
+}
+
+.conflict-dialog-buttons {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+}
+
+.conflict-dialog-buttons button {
+  flex: 1;
+  margin: 5px;
 }
 </style>
