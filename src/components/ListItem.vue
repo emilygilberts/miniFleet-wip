@@ -63,7 +63,7 @@ export default {
   },
   data() {
     return {
-      isPositionListExpanded: true,
+      isPositionListExpanded: false,
     };
   },
   methods: {
