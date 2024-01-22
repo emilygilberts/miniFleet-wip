@@ -267,7 +267,7 @@ body {
 }
 .update-dialog {
   position: fixed;
-  z-index: 1000;
+  z-index: 2000;
   left: 60%;
   top: 40px;
   max-width: 576px;
