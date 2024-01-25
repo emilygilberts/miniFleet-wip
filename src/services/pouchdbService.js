@@ -1,4 +1,5 @@
 import PouchDB from "pouchdb-browser";
+import jsonpatch from "fast-json-patch";
 
 const initializePouchDB = (dbName) => {
   return new PouchDB(dbName);
@@ -43,6 +44,13 @@ const postDoc = async (db, doc) => {
   return addition.ok ? addition : null;
 };
 const putDoc = async (db, doc) => {
+  //get previously stored version of the document
+  const oldDoc = await db.get(doc._id);
+  // get JSON Patch from new version to old version!
+  const patch = jsonpatch.compare(doc, oldDoc);
+  // add the patch to the start of the history array
+  doc.history = doc.history || [];
+  doc.history.unshift(patch);
   const update = await db.put(doc);
   return update.ok ? update : null;
 };
