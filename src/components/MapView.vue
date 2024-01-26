@@ -6,7 +6,6 @@
       style="height: 100%"
       v-model:zoom="zoom"
       :center="center"
-      @click="clicked"
     >
       <l-tile-layer
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -53,11 +52,6 @@ export default {
       zoom: 7,
       center: [35.8356283888737, 18.078057451092175],
     };
-  },
-  methods: {
-    clicked(e) {
-      alert("Lat, Lon : " + e.latlng.lat + ", " + e.latlng.lng);
-    },
   },
 };
 </script>

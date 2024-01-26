@@ -1,5 +1,12 @@
 <template>
   <div id="app">
+    <div class="update-dialog" v-if="updateExists">
+      <p>New minifleet version available! Please update to load it :)</p>
+      <div class="update-dialog-buttons">
+        <button @click="updateAndRefresh">Update</button>
+        <button @click="remindUpdate">Remind me later</button>
+      </div>
+    </div>
     <div id="list">
       <LeftNav
         :items="items"
@@ -44,14 +51,40 @@ export default {
       positionsDb: null,
       items: [],
       positions: [],
+      registration: null,
+      updateExists: false,
     };
   },
   async mounted() {
     //get stored items and positions from local and setup replication
     this.setupPouchDBs();
     await this.getInitialData();
+
+    //listen for available updates from the service worker
+    document.addEventListener("swUpdateAvailable", this.updateAvailable);
+    //event listener to reload page when service worker has changes
+    if (navigator.serviceWorker) {
+      navigator.serviceWorker.addEventListener("controllerchange", function () {
+        window.location.reload();
+      });
+    }
   },
   methods: {
+    updateAvailable(event) {
+      this.registration = event.detail;
+      this.updateExists = true;
+    },
+    updateAndRefresh() {
+      //only send a 'skip waiting' message if the SW is waiting
+      if (!this.registration || !this.registration.waiting) return;
+      //send message to SW to skip the waiting and activate the new SW
+      this.registration.waiting.postMessage({ type: "SKIP_WAITING" });
+      this.updateExists = false;
+    },
+    remindUpdate() {
+      //TODO: remind of update later
+      this.updateExists = false;
+    },
     async setupPouchDBs() {
       this.itemsDb = initializePouchDB(ITEMS_DB_NAME);
       this.positionsDb = initializePouchDB(POSITIONS_DB_NAME);
@@ -68,10 +101,12 @@ export default {
       });
       replication
         .on("change", async (info) => {
-          if (db === this.itemsDb) {
-            await this.getItems();
-          } else if (db === this.positionsDb) {
-            await this.getPositions();
+          if (info.direction === "pull") {
+            if (db === this.itemsDb) {
+              await this.getItems();
+            } else if (db === this.positionsDb) {
+              await this.getPositions();
+            }
           }
         })
         .on("error", (err) => {
@@ -92,14 +127,21 @@ export default {
     async addNewItem(newItem) {
       //post new item to local items db
       const addition = await postDoc(this.itemsDb, newItem);
+      this.getItems();
     },
     async editItem(updatedItem) {
       //put updated item to local items db
       const update = await putDoc(this.itemsDb, updatedItem);
+      this.getItems();
     },
     async removeItem(itemToRemove) {
       //remove item - mark as deleted in local db
       const removal = await removeDoc(this.itemsDb, itemToRemove);
+      if (removal.ok) {
+        this.items = this.items.filter((item) => {
+          return item.id !== itemToRemove.id;
+        });
+      }
       // Remove positions associated with the removed item
       const positionsToRemove = this.positions.filter(
         (pos) => pos.itemId === itemToRemove.id
@@ -109,15 +151,26 @@ export default {
           await this.removePosition(position);
         })
       );
+      // Update the positions array after removing positions
+      this.positions = this.positions.filter(
+        (position) => position.itemId !== itemToRemove.id
+      );
     },
     async addPosition(newPosition) {
       const addition = await postDoc(this.positionsDb, newPosition);
+      this.getPositions();
     },
     async editPosition(updatedPosition) {
       const update = await putDoc(this.positionsDb, updatedPosition);
+      this.getPositions();
     },
     async removePosition(positionToRemove) {
       const removal = await removeDoc(this.positionsDb, positionToRemove);
+      if (removal.ok) {
+        this.positions = this.positions.filter((position) => {
+          return position.id !== positionToRemove.id;
+        });
+      }
     },
   },
 };
@@ -155,5 +208,24 @@ body {
 .position-form {
   /* padding: 5%; */
   margin: 2%;
+}
+.update-dialog {
+  position: fixed;
+  z-index: 1000;
+  left: 60%;
+  top: 40px;
+  max-width: 576px;
+  transform: translateX(-50%);
+  border-radius: 15px;
+  border: 2px solid rgb(24, 24, 157);
+  box-shadow: 0 0 5px rgba(90, 87, 87, 0.5);
+  padding: 12px;
+  color: black;
+  background-color: #ffffff;
+  text-align: left;
+}
+.update-dialog button {
+  margin: 5px;
+  margin-left: 0px;
 }
 </style>
