@@ -120,6 +120,14 @@ const handleManualMerge = (db, doc, conflictingDoc) => {
   );
 };
 
+const resolveConflictedDoc = async (db, doc, conflictingDocs, choice) => {
+  if (choice === "mine") {
+    console.log("user chose own changes");
+  } else if (choice === "incoming") {
+    console.log("user chose incoming changes");
+  }
+};
+
 const postDoc = async (db, doc) => {
   const addition = await db.post(doc);
   return addition.ok ? addition : null;
@@ -156,4 +164,11 @@ const removeDoc = async (db, doc) => {
   return removal.ok ? removal : null;
 };
 
-export { initializePouchDB, getAllDocs, postDoc, putDoc, removeDoc };
+export {
+  initializePouchDB,
+  getAllDocs,
+  postDoc,
+  putDoc,
+  removeDoc,
+  resolveConflictedDoc,
+};

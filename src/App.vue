@@ -7,29 +7,13 @@
         <button @click="remindUpdate">Remind me later</button>
       </div>
     </div>
-    <div class="conflict-dialog" v-if="conflictExists">
-      <p>Conflict detected!</p>
-      <div class="conflict-details">
-        <div class="conflict-doc">
-          <h5>Original Document</h5>
-          <!-- Display properties of the original document -->
-          <pre>{{ conflictDoc }}</pre>
-        </div>
-        <div class="conflicting-versions">
-          <h5>Conflicting Versions</h5>
-          <!-- Display properties of conflicting version -->
-          <div>
-            <pre>
-              {{ conflictingVersion }}
-            </pre>
-          </div>
-        </div>
-      </div>
-      <div class="conflict-dialog-buttons">
-        <button @click="chooseMine">Choose Mine</button>
-        <button @click="chooseIncoming">Choose Incoming</button>
-      </div>
-    </div>
+    <ConflictDialog
+      v-if="conflictExists"
+      :conflictDb="conflictDb"
+      :conflictDoc="conflictDoc"
+      :conflictingVersion="conflictingVersion"
+      @choose-doc="handleChooseDoc"
+    />
     <div id="list">
       <LeftNav
         :items="items"
@@ -51,6 +35,7 @@
 <script>
 import MapView from "@/components/MapView.vue";
 import LeftNav from "@/components/LeftNav.vue";
+import ConflictDialog from "@/components/ConflictDialog.vue";
 import PouchDB from "pouchdb-browser";
 import {
   initializePouchDB,
@@ -58,6 +43,7 @@ import {
   postDoc,
   putDoc,
   removeDoc,
+  resolveConflictedDoc,
 } from "@/services/pouchdbService";
 const ITEMS_DB_NAME = "minifleet_items";
 const POSITIONS_DB_NAME = "minifleet_positions";
@@ -67,6 +53,7 @@ export default {
   components: {
     MapView,
     LeftNav,
+    ConflictDialog,
   },
   data() {
     return {
@@ -77,6 +64,7 @@ export default {
       registration: null,
       updateExists: false,
       conflictExists: false,
+      conflictDb: null,
       conflictDoc: null,
       conflictingVersion: null,
     };
@@ -99,29 +87,26 @@ export default {
   },
   methods: {
     handleConflict(event) {
-      const { originalDoc, conflictingVersion } = event.detail;
+      const { conflictDb, originalDoc, conflictingVersion } = event.detail;
       console.log(
         "Conflict detected for:",
         originalDoc,
         "conflicting version: ",
         conflictingVersion
       );
+      this.conflictDb = conflictDb;
       this.conflictDoc = originalDoc;
       this.conflictingVersion = conflictingVersion;
       this.conflictExists = true;
     },
-    chooseMine() {
-      // Handle conflict resolution: Choose local version
-      console.log("Choosing local version");
-      // Implement your logic to resolve the conflict using the local version
-      this.conflictExists = false; // Close the conflict dialog
-    },
-
-    chooseIncoming() {
-      // Handle conflict resolution: Choose incoming version
-      console.log("Choosing incoming version");
-      // Implement your logic to resolve the conflict using the incoming version
-      this.conflictExists = false; // Close the conflict dialog
+    handleChooseDoc(choice) {
+      resolveConflictedDoc(
+        this.conflictDb,
+        this.conflictDoc,
+        this.conflictingVersion,
+        choice
+      );
+      this.conflictExists = false;
     },
     updateAvailable(event) {
       this.registration = event.detail;
@@ -283,53 +268,5 @@ body {
 .update-dialog button {
   margin: 5px;
   margin-left: 0px;
-}
-.conflict-dialog {
-  position: fixed;
-  z-index: 1000;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  width: 70%;
-  max-width: 90%;
-  max-height: 90%;
-  border-radius: 15px;
-  border: 2px solid rgb(24, 24, 157);
-  box-shadow: 0 0 5px rgba(90, 87, 87, 0.5);
-  padding: 12px;
-  color: black;
-  background-color: #ffffff;
-  text-align: left;
-  overflow: scroll;
-}
-
-.conflict-details {
-  display: flex;
-  flex-wrap: wrap;
-}
-
-.conflict-doc,
-.conflicting-versions {
-  flex: 1;
-  min-width: 0;
-  padding: 10px;
-  border: 1px solid #ddd;
-  margin: 5px;
-}
-.conflict-doc pre,
-.conflicting-versions pre {
-  font-size: 10px;
-  padding: 8px;
-}
-
-.conflict-dialog-buttons {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 10px;
-}
-
-.conflict-dialog-buttons button {
-  flex: 1;
-  margin: 5px;
 }
 </style>
