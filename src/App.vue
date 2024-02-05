@@ -11,15 +11,17 @@
       <p>Conflict detected!</p>
       <div class="conflict-details">
         <div class="conflict-doc">
-          <h3>Original Document</h3>
+          <h5>Original Document</h5>
           <!-- Display properties of the original document -->
           <pre>{{ conflictDoc }}</pre>
         </div>
         <div class="conflicting-versions">
-          <h3>Conflicting Versions</h3>
-          <!-- Display properties of conflicting versions -->
-          <div v-for="(version, index) in conflictingVersions" :key="index">
-            <pre>{{ version }}</pre>
+          <h5>Conflicting Versions</h5>
+          <!-- Display properties of conflicting version -->
+          <div>
+            <pre>
+              {{ conflictingVersion }}
+            </pre>
           </div>
         </div>
       </div>
@@ -76,7 +78,7 @@ export default {
       updateExists: false,
       conflictExists: false,
       conflictDoc: null,
-      conflictingVersions: null,
+      conflictingVersion: null,
     };
   },
   async mounted() {
@@ -97,15 +99,15 @@ export default {
   },
   methods: {
     handleConflict(event) {
-      const { originalDoc, conflictingVersions } = event.detail;
+      const { originalDoc, conflictingVersion } = event.detail;
       console.log(
         "Conflict detected for:",
         originalDoc,
         "conflicting version: ",
-        conflictingVersions
+        conflictingVersion
       );
       this.conflictDoc = originalDoc;
-      this.conflictingVersions = conflictingVersions;
+      this.conflictingVersion = conflictingVersion;
       this.conflictExists = true;
     },
     chooseMine() {
@@ -258,11 +260,9 @@ body {
   margin: 0;
 }
 .item-form {
-  /* padding: 5%; */
   margin: 2%;
 }
 .position-form {
-  /* padding: 5%; */
   margin: 2%;
 }
 .update-dialog {
@@ -290,7 +290,9 @@ body {
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-  max-width: 80%; /* Adjusted to limit the width */
+  width: 70%;
+  max-width: 90%;
+  max-height: 90%;
   border-radius: 15px;
   border: 2px solid rgb(24, 24, 157);
   box-shadow: 0 0 5px rgba(90, 87, 87, 0.5);
@@ -298,21 +300,26 @@ body {
   color: black;
   background-color: #ffffff;
   text-align: left;
-  overflow: hidden; /* Ensures that content does not overflow */
+  overflow: scroll;
 }
 
 .conflict-details {
   display: flex;
-  flex-wrap: wrap; /* Allows content to wrap to the next line if needed */
+  flex-wrap: wrap;
 }
 
 .conflict-doc,
 .conflicting-versions {
   flex: 1;
-  min-width: 0; /* Allows content to shrink if needed */
+  min-width: 0;
   padding: 10px;
   border: 1px solid #ddd;
   margin: 5px;
+}
+.conflict-doc pre,
+.conflicting-versions pre {
+  font-size: 10px;
+  padding: 8px;
 }
 
 .conflict-dialog-buttons {

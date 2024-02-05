@@ -18,3 +18,13 @@ export function generateRandomId() {
   const random = Math.floor(Math.random() * 1000); // Adjust the range as needed
   return `${timestamp}_${random}`;
 }
+
+export function arraysHaveSameElements(array1, array2) {
+  return array1.some((item1) => array2.some((item2) => item1 === item2));
+}
+
+export function excludeFields(source, fieldsToExclude) {
+  const filteredCopy = { ...source };
+  fieldsToExclude.forEach((field) => delete filteredCopy[field]);
+  return filteredCopy;
+}
