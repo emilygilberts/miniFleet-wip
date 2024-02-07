@@ -1,7 +1,6 @@
 import PouchDB from "pouchdb-browser";
 import jsonpatch from "fast-json-patch";
 import { arraysHaveSameElements, excludeFields } from "@/utils.js";
-const fields_to_exclude = ["_conflicts", "_rev", "history"];
 const initializePouchDB = (dbName) => {
   return new PouchDB(dbName);
 };
@@ -28,6 +27,7 @@ const handleConflicts = async (db, doc) => {
   const conflictingDocs = await getConflictingVersions(db, doc);
   //TODO: handle multiple conflicting docs
   const firstConflictingDoc = conflictingDocs[0];
+  console.log("handleConflicts", doc, firstConflictingDoc);
   const { previousDocThis, previousDocConflict } = getPreviousRevisions(
     doc,
     firstConflictingDoc
@@ -46,13 +46,13 @@ const getPreviousRevisions = (doc, conflictingDoc) => {
   // const fields_to_exclude = ["_conflicts", "_rev", "history"];
   //apply the patch and set mutateDocument to false to not apply the patch to the document directly
   const previousDocThis = jsonpatch.applyPatch(
-    excludeFields(doc, fields_to_exclude),
+    excludeFields(doc),
     doc.history[0],
     undefined,
     false
   ).newDocument;
   const previousDocConflict = jsonpatch.applyPatch(
-    excludeFields(conflictingDoc, fields_to_exclude),
+    excludeFields(conflictingDoc),
     conflictingDoc.history[0],
     undefined,
     false
@@ -76,13 +76,10 @@ const getConflictingVersions = async (db, doc) => {
 
 const handleAutoMerge = (db, doc, conflictingDoc, previousDocThis) => {
   //if last history produced same revision get the patches to the current versions
-  const patchToCurrent = jsonpatch.compare(
-    previousDocThis,
-    excludeFields(doc, fields_to_exclude)
-  );
+  const patchToCurrent = jsonpatch.compare(previousDocThis, excludeFields(doc));
   const patchToConflict = jsonpatch.compare(
     previousDocThis,
-    excludeFields(conflictingDoc, fields_to_exclude)
+    excludeFields(conflictingDoc)
   );
   //check if the patches include the same paths (changed the same fields)
   const haveSamePaths = arraysHaveSameElements(
@@ -113,18 +110,38 @@ const handleManualMerge = (db, doc, conflictingDoc) => {
     new CustomEvent("conflict-detected", {
       detail: {
         db: db,
-        originalDoc: doc,
-        conflictingVersion: conflictingDoc,
+        winningDoc: doc,
+        conflictingDoc: conflictingDoc,
       },
     })
   );
 };
-
-const resolveConflictedDoc = async (db, doc, conflictingDocs, choice) => {
-  if (choice === "mine") {
-    console.log("user chose own changes");
-  } else if (choice === "incoming") {
-    console.log("user chose incoming changes");
+const resolveConflictByPicking = async (
+  db,
+  winningDoc,
+  conflictingDoc,
+  version
+) => {
+  switch (version) {
+    case "winning":
+      console.log("user agrees with couchdbs automatic winner choice");
+      console.log("delete conflicting version document", conflictingDoc);
+      const removedConflicting = await db.remove(
+        winningDoc._id,
+        conflictingDoc._rev
+      );
+      console.log(removedConflicting);
+      if (removedConflicting.ok) {
+        console.log("successfully deleted conflicting revision");
+      }
+      break;
+    case "conflicting":
+      console.log("user choses conflicting version");
+      console.log("remove the current doc", winningDoc);
+      const removedWinning = db.remove(winningDoc._id, winningDoc._rev);
+      if (removedWinning.ok) {
+        console.log("successfully deleted conflicting revision");
+      }
   }
 };
 
@@ -170,5 +187,5 @@ export {
   postDoc,
   putDoc,
   removeDoc,
-  resolveConflictedDoc,
+  resolveConflictByPicking,
 };

@@ -10,9 +10,10 @@
     <ConflictDialog
       v-if="conflictExists"
       :conflictDb="conflictDb"
-      :conflictDoc="conflictDoc"
-      :conflictingVersion="conflictingVersion"
+      :winningVersionValues="winningVersionValues"
+      :conflictingVersionValues="conflictingVersionValues"
       @choose-doc="handleChooseDoc"
+      @cancel-conflict-dialog="cancelConflictDialog"
     />
     <div id="list">
       <LeftNav
@@ -37,13 +38,14 @@ import MapView from "@/components/MapView.vue";
 import LeftNav from "@/components/LeftNav.vue";
 import ConflictDialog from "@/components/ConflictDialog.vue";
 import PouchDB from "pouchdb-browser";
+import { excludeFields } from "@/utils.js";
 import {
   initializePouchDB,
   getAllDocs,
   postDoc,
   putDoc,
   removeDoc,
-  resolveConflictedDoc,
+  resolveConflictByPicking,
 } from "@/services/pouchdbService";
 const ITEMS_DB_NAME = "minifleet_items";
 const POSITIONS_DB_NAME = "minifleet_positions";
@@ -65,8 +67,10 @@ export default {
       updateExists: false,
       conflictExists: false,
       conflictDb: null,
-      conflictDoc: null,
-      conflictingVersion: null,
+      winningDoc: null,
+      conflictingDoc: null,
+      winningVersionValues: null,
+      conflictingVersionValues: null,
     };
   },
   async mounted() {
@@ -87,25 +91,28 @@ export default {
   },
   methods: {
     handleConflict(event) {
-      const { conflictDb, originalDoc, conflictingVersion } = event.detail;
-      console.log(
-        "Conflict detected for:",
-        originalDoc,
-        "conflicting version: ",
-        conflictingVersion
-      );
-      this.conflictDb = conflictDb;
-      this.conflictDoc = originalDoc;
-      this.conflictingVersion = conflictingVersion;
+      const { db, winningDoc, conflictingDoc } = event.detail;
+      this.winningVersionValues = excludeFields(winningDoc);
+      this.conflictingVersionValues = excludeFields(conflictingDoc);
+      this.conflictDb = db;
+      this.winningDoc = winningDoc;
+      this.conflictingDoc = conflictingDoc;
       this.conflictExists = true;
     },
-    handleChooseDoc(choice) {
-      resolveConflictedDoc(
-        this.conflictDb,
-        this.conflictDoc,
-        this.conflictingVersion,
-        choice
-      );
+    cancelConflictDialog() {
+      //TODO: resolve later
+      this.conflictExists = false;
+    },
+    handleChooseDoc(version, chosenVersion) {
+      if (version === "winning" || "conflicting") {
+        resolveConflictByPicking(
+          this.conflictDb,
+          this.winningDoc,
+          this.conflictingDoc,
+          version
+        );
+      }
+      //TODO: resolveConflictByMerging
       this.conflictExists = false;
     },
     updateAvailable(event) {
