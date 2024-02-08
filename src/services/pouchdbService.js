@@ -145,6 +145,34 @@ const resolveConflictByPicking = async (
   }
 };
 
+const resolveConflictByMerging = async (
+  db,
+  winningDoc,
+  conflictingDoc,
+  mergedVersion
+) => {
+  const current = await db.get(winningDoc._id);
+  console.log("winning version in db", current);
+  console.log("with current history", current.history);
+  console.log("user wants to update with values:", mergedVersion);
+  //TODO: or compare with last revision for clean history?
+  const winningValues = excludeFields(winningDoc);
+  const patchToMerged = jsonpatch.compare(winningValues, mergedVersion);
+  console.log("patch from winning version to merged versin", patchToMerged);
+  console.log("applying that to winning version");
+  const patchedDoc = jsonpatch.applyPatch(
+    winningDoc,
+    patchToMerged,
+    undefined,
+    false
+  ).newDocument;
+  //and save the backwards patch to add to the history
+  const patch = jsonpatch.compare(patchedDoc, winningDoc);
+  console.log("backwards patch for history", patch);
+
+  console.log("try db.putmergeddoc check history");
+  putMergedDoc(db, patchedDoc, patch, conflictingDoc._rev);
+};
 const postDoc = async (db, doc) => {
   const addition = await db.post(doc);
   return addition.ok ? addition : null;
@@ -188,4 +216,5 @@ export {
   putDoc,
   removeDoc,
   resolveConflictByPicking,
+  resolveConflictByMerging,
 };

@@ -46,6 +46,7 @@ import {
   putDoc,
   removeDoc,
   resolveConflictByPicking,
+  resolveConflictByMerging,
 } from "@/services/pouchdbService";
 const ITEMS_DB_NAME = "minifleet_items";
 const POSITIONS_DB_NAME = "minifleet_positions";
@@ -104,7 +105,14 @@ export default {
       this.conflictExists = false;
     },
     handleChooseDoc(version, chosenVersion) {
-      if (version === "winning" || "conflicting") {
+      if (version === "merged") {
+        resolveConflictByMerging(
+          this.conflictDb,
+          this.winningDoc,
+          this.conflictingDoc,
+          chosenVersion
+        );
+      } else {
         resolveConflictByPicking(
           this.conflictDb,
           this.winningDoc,
